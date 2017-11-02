@@ -1,4 +1,4 @@
-Package: AsaLab
+Package: GwasAnalysis
 Type: Package
 Title: A package for filtering and analysis CT values
 Version: 1.0.1
