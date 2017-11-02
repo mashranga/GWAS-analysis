@@ -1,0 +1,18 @@
+Package: AsaLab
+Type: Package
+Title: A package for filtering and analysis CT values
+Version: 1.0.1
+Author: MOhammad Tanvir Ahamed
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Package to analyzt CT values for qPCR analysis. 
+    More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
+Depends: R (>= 3.0.0)
+Imports: impute, lattice, psych, graphics, grDevices, stats, gdata, reshape
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

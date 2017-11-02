@@ -1,0 +1,193 @@
+---
+title : "<center>__AsaLab__</center><center>A package for filtering and analysis CT values </center>"
+author: "<center>*Åsa Torinsson Naluai, Mohammad Tanvir Ahamed*</center><center>University of Gothenburg, Sweden</center>"
+date: "<center> Date: *`r Sys.Date()`*</center><center>__*Version: 1.0.0*__</center>"
+
+output:
+  BiocStyle::html_document: 
+    toc: yes
+    toc_depth: 4
+    number_sections: TRUE
+    
+  BiocStyle::pdf_document: 
+    toc: TRUE
+    toc_depth: 4
+    number_sections: TRUE
+  
+vignette: >
+  %\VignetteIndexEntry{AsaLab User Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8x]{inputenc}
+
+---
+AsaLab is a package for filtering, analysing and visualization of CT valuse. 
+
+# Data formate for input file 
+## Data formate for CT values
+Input data is the output of "ExpressionSuite software" in .txt formated file. The data structure is as follows
+
+```{r, echo=FALSE}
+library(AsaLab)
+data(ex_data_1)
+head(ex_data_1)
+```
+
+## Data formate for phenotype values
+Input data formate for phenotype data is as follows. The first column is the sample name and the second column is the phenotype / status for the corresponding sample. 
+```{r, echo=FALSE}
+library(AsaLab)
+data(ex_phenotype_1)
+head(ex_phenotype_1)
+```
+# Function to read files (CT values and Phenotype)
+## Read CT values form ExpressionSuite output
+The function named `readCT` can read the file for CT values for an external file in csv, xls or txt formate.
+```r
+mdata <- readCT(file, skip = 14,...)
+
+# Explanation of the function parameters
+# -- file     =  Name of the file to read including location
+# -- skip     =  Number of line to skip form reading. Default is 14.
+# -- ...      =  additional parameter to input.
+```
+## Read phenotype file
+The phenotype file can be read by the following code. 
+```r
+phen   <- read.csv (file , sep="\t")
+
+# Explanation of the function parameters
+# -- file     =  Name of the file to read including location
+```
+
+# Filtering CT values
+## CT value filtering criteria
+Based on the data formate in the previous section, there are some criteria to filter the CT values. The criteria are as follows
+
+- In 'Omit' column if values are TRUE, delete those row/sample.
+- In 'Ct' column replace all values labeled "Undetermined" by NA or 40 (User specified).
+- In 'Ct' column any value beyond 15 and 40 , replace by NA
+- __Sample with missing values:__
+-  1. *Sample has 1 non-missing value*: Replace all missing with that one non-missing value.
+-  2. *Sample has 2 non-missing value*: d is Absolute difference between two CT values. If d > 2 (User specified), delete all those sample/row and if d <= 2 (User specified), replace all missing values by the mean of 2 non-missing CT values. 
+-  3. *Sample has 3 non-missing value*: Sort the 3 non-missing CT values by increasing order. d1 ( difference between 1st and 2nd) and d2 (difference between 2nd and 3rd) is the consicutive absolute difference between them. If any d (d1 or d2) is greater than 2 (User specified), delete all sample/ row. If d2 > 2d1, delete the 3rd CT value and replace all the non-missing ct values with the mean of 2 non-missing values. If d1 > 2d2, delete the 1st CT value and replace all the non-missing ct values with the mean of 2 non-missing values
+-  4. *Sample has 4 or more  non-missing value*: Count the median of all non missing values and delete those, whose absolute difference than median is greater than 2 (User specified). Then count the mean of the rest and  replace the missing values with mean.
+- __Sample without missing values:__
+-  1. *Sample with 2 values* : If d > 2 (User specified), delete both of samples otherwise keep both.
+-  2. *Sample with 3 values* : Sort the 3 CT values by increasing order. d1 ( difference between 1st and 2nd) and d2 (difference between 2nd and 3rd) is the consicutive absolute difference between them. If any d (d1 or d2) is greater than 2 (User specified), delete all sample/ row. If d2 > 2d1, delete the 3rd CT value and if d1 > 2d2, delete the 1st CT value.
+-  3. *Sample with 4 or more values* : Count the median of ct values and delete those, whose absolute difference than median is greater than 2 (User specified) and keep the rest.
+
+## Applying CT value filtering criteria
+The above criteries has applied with the function `filterCT` and  mean CT value has computed for each sample for specific genes and save them in a file.
+```r
+res <- filterCT(file, sample = "Sample.Name",
+                     target = "Target.Name", ct = "Ct",
+                     ctlimit = c(15,40), ampscore = 0.6,
+                     undet = NULL, phenotype = NULL,ctd = 2,
+                     omit = NULL, out = "filterCT")
+                     
+# Explanation of the function parameters
+#  -- file      = Object output of \link[AsaLab]{readCT}.
+#  -- sample    = Sample column name. Default "Sample.Name"
+#  -- target    = Target column name. Default "Target.Name"
+#  -- ct        = CT column name. Default "Ct"
+#  -- ctlimit   = Limit to keep CT value. Default min= 15 and max = 40.
+#  -- undet     = Value to replace undetermine. Default is NULL. Input value should be numeric.
+#  -- ampscore  = Amplification score to reject the sample. Default 0.6 [Not active in the current version]
+#  -- phenotype = Group classification for sample name.
+#  -- ctd       = Absulute difference between ct values to accept. Default is 2. See user documentation for details.
+#  -- omit      = If "TRUE" , sample with TRUE value in omit column will delete. Default is NULL.
+#  -- out       = Name of output file to save the result in CSV formate. Default name "filterCT".
+```
+### Examples
+```{r}
+## CT values form ExpressionSuite output
+data(ex_data_1)
+mdata <- ex_data_1
+## Phenotype file
+data(ex_phenotype_1)
+phen <- ex_phenotype_1
+
+## Apply CT value filtering criteria
+# Without phenotype file input
+res  <- filterCT(file = mdata, phenotype = NULL, out = "filterCT")
+head(res)
+# With phenotype file input
+res  <- filterCT(file = mdata, phenotype = phen, out = "filterCT")
+head(res)
+```
+The above output will be saved in the working directoty in a file (Default file name is "filterCT.csv". File name can be change in "out" parameter of `filterCT` function)
+
+# Analyze CT values
+## nalysis to apply
+The following steps has applied to analyze filtered CT values (With `filterCT` function)
+
+- Delete both gene (column) and sample (row) with missing values. Thrashold is defined by user. Default is 70%. That means, column (Gene) with equel or more than 70% missing value will be exculded form the analysis. Then the same approach will apply over row (Sample).
+- The rest of the missinf values will be replace by user define valus or not. Default is NULL.
+- Save this result in the working directory in a file named "filterCT_1.csv".
+- Based on the list of housekeeping gene, deltaCT is computed and saved in the working directory in a file named as corresponding housekeeping gene in csv formate.
+
+---- Based on a single housekeeping gene, boxplot and p-values (Based on 2 sample t-test) of deltaCT values for different phenotype group has computed and saved in the working directory in a file named as corresponding housekeeping gene in pdf formate.
+
+- Based on the list of housekeeping gene, the average CT values for those housekeeping gene is computed. Then deltaCT is computed and saved in the working directory in a file named as "avg_deltaCT.csv".
+
+---- Based on a single housekeeping gene, boxplot and p-values (Based on 2 sample t-test) of deltaCT values for different phenotype group has computed and saved in the working directory in a file named as corresponding housekeeping gene in pdf formate. 
+
+The above steps has applied with `analyzeCT` function
+```r
+CTres <- analyzeCT(file, skip = 2, hkgene ,control="CONTROL", del = 0.7, missCT = NULL)
+
+# Explanation of the function parameters
+- file      = Data in Matrix. Output of `filterCT` function.
+- skip      = Number of column to skip form 1st column in input file. Default is 2.
+- hkgene    = House keeping gene.
+- control   = Name of phynotype that will assign as control. Default is "CONTROL".
+- del       = Percentage of missing value for which any gene or sample will be excuded form analysis. Default is 0.7 (70 percentage).
+- missCT    = If missing value will replace with 40 or otheres. Default is NULL.
+```
+## Examples
+```{r, message=FALSE}
+## CT values form ExpressionSuite output
+data(ex_data_1)
+mdata <- ex_data_1
+## Phenotype file
+data(ex_phenotype_1)
+phen <- ex_phenotype_1
+## Filter CT values 
+res  <- filterCT(file = mdata, phenotype = phen, out = "filterCT")
+## House keeping gene
+hkg    <- c("YWHAZ_047","GUSB_627","HPRT1_909")
+CTres  <- analyzeCT (file = res, skip=2, hkgene = hkg,control="control",del = 0.7, missCT = NULL)
+```
+
+The output of `analyzeCT` has 3 (Three) section/ part
+
+```r
+# Part 1 : Deleted gene list
+p1 <- CTres$del_gene
+p1
+```
+```{r, echo=FALSE}
+p1 <- CTres$del_gene
+p1
+```
+
+```r
+# Part 2 : Deleted sample list
+p2 <- CTres$del_sample
+p2
+```
+```{r, echo=FALSE}
+p2 <- CTres$del_sample
+p2
+```
+
+```r
+# Part 3 : Delta CT values based on corresponding housekeeping genes
+p3<- lapply(CTres$delta_CT,head)
+p3
+```
+```{r, echo=FALSE}
+p3<- lapply(CTres$delta_CT,head)
+p3
+```
